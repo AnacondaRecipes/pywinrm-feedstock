@@ -1,35 +1,51 @@
 {% set name = "pywinrm" %}
-{% set version = "0.4.1" %}
-{% set sha256 = "4ede5c6c85b53780ad0dbf9abef2fa2ea58f44c82256a84a63eae5f1205cea81" %}
+{% set version = "0.5.0" %}
 
 package:
   name: {{ name|lower }}
   version: {{ version }}
 
 source:
-  fn: {{ name }}-{{ version }}.tar.gz
-  url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
-  sha256: {{ sha256 }}
+  url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
+  sha256: 5428eb1e494af7954546cd4ff15c9ef1a30a75e05b25a39fd606cef22201e9f1
 
 build:
-  noarch: python
   number: 0
-  script: "{{ PYTHON }} -m pip install . -vv"
+  skip: True  # [py<38]
+  script: {{ PYTHON }} -m pip install . --no-deps --no-build-isolation -vv
 
 requirements:
-  build:
-    - python
+  host:
     - pip
+    - python
+    - setuptools >=61.0.0
   run:
     - python
-    - six
     - xmltodict
     - requests >=2.9.1
-    - requests_ntlm >=0.3.0
+    - requests_ntlm >=1.1.0
+  run_constrained:
+    - requests-credssp >=1.0.0
+    - pykerberos >=1.2.1,<2.0.0 # [not win]
+    - winkerberos >=0.5.0 # [win]
 
 test:
+  source_files:
+    - winrm/tests
+  requires:
+    - pip
+    - mock
+    - pytest
   imports:
     - winrm
+    - winrm.protocol
+    - winrm.transport
+    - winrm.exceptions
+    # winrm.vendor.requests_kerberos is not being imported due to its lack in our main channel for win and linux-aarch64
+  commands:
+    - pip check
+    - python -c "from importlib.metadata import version; assert(version('{{ name }}')=='{{ version }}')"
+    - pytest winrm/tests -v
 
 about:
   home: https://github.com/diyan/pywinrm
@@ -37,11 +53,11 @@ about:
   license_family: MIT
   license_file: LICENSE
   summary: 'Python library for Windows Remote Management (WinRM)'
-
   description: |
     pywinrm is a Python client for the Windows Remote Management (WinRM) service. 
     It allows you to invoke commands on target Windows machines from any machine that can run Python.
   dev_url: https://github.com/diyan/pywinrm
+  doc_url: https://github.com/diyan/pywinrm
 
 extra:
   recipe-maintainers:
